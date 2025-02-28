@@ -157,7 +157,7 @@ export default function Home() {
         >
           {locationService ? <MapPin /> : <MapPinOff />}
         </Button>
-        <a target="_blank" href="#">
+        <a target="_blank" href="https://github.com/Leytox/history-map">
           <Button title="Link to GitHub" type="button" size={"icon"}>
             <GithubIcon />
           </Button>
