@@ -59,7 +59,7 @@ export default function Home() {
     }));
   }, []);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
         console.error(`Error attempting to enable fullscreen: ${err.message}`);
@@ -71,7 +71,7 @@ export default function Home() {
         setMapConfig((prev) => ({ ...prev, isFullscreen: false }));
       }
     }
-  };
+  }, []);
 
   const findMyLocation = () => {
     if (!navigator.geolocation) {
