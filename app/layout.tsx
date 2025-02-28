@@ -15,8 +15,51 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Historical Map",
-  description: "Created by Leytox",
+  title: {
+    default: "Historical Map",
+    template: "%s - Historical Map",
+  },
+  description: "Explore historical events on an interactive map.",
+  authors: [{ name: "Leytox" }],
+  keywords: ["history", "map", "historical events", "interactive map"],
+  openGraph: {
+    title: "Historical Map",
+    description: "Explore historical events on an interactive map.",
+    url: "https://your-deployment.vercel.app",
+    siteName: "Historical Map",
+    images: [
+      {
+        url: "https://your-deployment.vercel.app/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Historical Map OG Image",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Historical Map",
+    description: "Explore historical events on an interactive map.",
+    images: ["https://your-deployment.vercel.app/og.png"],
+    creator: "@Leytox",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
