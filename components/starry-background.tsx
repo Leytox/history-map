@@ -142,7 +142,7 @@ const StarryBackground = () => {
       // Occasionally create new shooting star (every 1-3 seconds)
       if (
         timestamp - lastShootingStarTime.current >
-        Math.random() * 2000 + 1000
+        Math.random() * 5000 + 2000
       ) {
         createShootingStar();
         lastShootingStarTime.current = timestamp;
