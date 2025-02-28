@@ -265,7 +265,7 @@ export default function Home() {
             placeholder="Search locations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-background"
+            className="bg-foreground text-background"
           />
           <Button type="submit" size="sm" disabled={isSearching}>
             {isSearching ? <LoaderIcon size={16} /> : <Search size={16} />}
@@ -332,7 +332,7 @@ export default function Home() {
         <ThemeSwitcher />
       </div>
 
-      <Card className="absolute top-2 left-2 bg-foreground items-center text-background min-w-[175px] max-w-[175px]">
+      <Card className="absolute top-2 left-2 bg-foreground items-center text-background min-w-[175px] max-w-[175px] p-1">
         <CardContent className="p-2 flex gap-2 items-center text-xs">
           <Compass size={14} />
           <span>{`${center.lat}°${center.lat >= 0 ? "N" : "S"}, ${center.lng}°${
