@@ -1,7 +1,7 @@
 "use client";
 import Map, { MapLayerMouseEvent, MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Loader from "@/components/loader";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,12 +12,19 @@ import {
   MapPin,
   MapPinOff,
   GithubIcon,
+  LoaderIcon,
+  Compass,
+  ZoomIn,
+  ZoomOut,
+  HomeIcon,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import ThemeSwitcher from "@/components/theme-switcher";
 import StarryBackground from "@/components/starry-background";
 import { useTheme } from "next-themes";
+import { Input } from "@/components/ui/input";
 
 enum MapTypes {
   light = "64a3a035-a49b-44fa-8501-f8b61522e5a0",
@@ -25,68 +32,82 @@ enum MapTypes {
 }
 
 export default function Home() {
-  const [mapLoaded, setMapLoaded] = useState<boolean>(false);
-  const [projection, setProjection] = useState<"mercator" | "globe">(
-    "mercator"
-  );
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [mapConfig, setMapConfig] = useState({
+    loaded: false,
+    projection: "mercator" as "mercator" | "globe",
+    isFullscreen: false,
+  });
+  const [locationService, setLocationService] = useState<boolean>(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [zoom, setZoom] = useState(4);
+  const [center, setCenter] = useState({ lat: 45, lng: 20 });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const mapRef = useRef<MapRef>(null);
   const coordsDisplayRef = useRef<HTMLParagraphElement>(null);
-  const [locationService, setLocationService] = useState<boolean>(
-    !!navigator.geolocation
-  );
 
   const { theme } = useTheme();
 
-  const onMapLoad = () => {
-    setMapLoaded(true);
-  };
+  const onMapLoad = useCallback(() => {
+    setMapConfig((prev) => ({ ...prev, loaded: true }));
+  }, []);
+
+  const toggleProjection = useCallback(() => {
+    setMapConfig((prev) => ({
+      ...prev,
+      projection: prev.projection === "mercator" ? "globe" : "mercator",
+    }));
+  }, []);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
         console.error(`Error attempting to enable fullscreen: ${err.message}`);
       });
-      setIsFullscreen(true);
+      setMapConfig((prev) => ({ ...prev, isFullscreen: true }));
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-        setIsFullscreen(false);
+        setMapConfig((prev) => ({ ...prev, isFullscreen: false }));
       }
     }
   };
 
   const findMyLocation = () => {
-    if (locationService) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { longitude, latitude } = position.coords;
-          mapRef.current?.flyTo({
-            center: [longitude, latitude],
-            zoom: 9,
-            duration: 2000,
-          });
-          setLocationService(true);
-        },
-        (error) => {
-          console.error("Error getting location:", error);
-          toast(
-            "Unable to retrieve your location. Please check your browser permissions."
-          );
-          setLocationService(false);
-        }
-      );
-    } else {
-      toast(
-        "Geolocation is not supported by your browser, try to restart page or use another browser."
-      );
+    if (!navigator.geolocation) {
+      toast("Geolocation is not supported by your browser");
+      setLocationService(false);
+      return;
     }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { longitude, latitude } = position.coords;
+        mapRef.current?.flyTo({
+          center: [longitude, latitude],
+          zoom: 9,
+          duration: 2000,
+        });
+        setLocationService(true);
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        toast(`Unable to retrieve your location: ${error.message}`);
+        setLocationService(false);
+        setIsLocating(false);
+      }
+    );
   };
 
   useEffect(() => {
     setLocationService(!!navigator.geolocation);
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      setMapConfig((prev) => ({
+        ...prev,
+        isFullscreen: !!document.fullscreenElement,
+      }));
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -104,14 +125,94 @@ export default function Home() {
     }
   };
 
+  const handleZoomIn = () => {
+    if (!mapRef.current) return;
+    mapRef.current.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    if (!mapRef.current) return;
+    mapRef.current.zoomOut();
+  };
+
+  const handleZoomChange = () => {
+    if (!mapRef.current) return;
+    setZoom(mapRef.current.getZoom());
+  };
+
+  const resetView = useCallback(() => {
+    if (!mapRef.current) return;
+    mapRef.current.flyTo({
+      center: [20, 45],
+      zoom: 4,
+      duration: 1000,
+    });
+  }, []);
+
+  const handleMapMove = useCallback(() => {
+    if (!mapRef.current) return;
+    const center = mapRef.current.getCenter();
+    setCenter({
+      lat: parseFloat(center.lat.toFixed(3)),
+      lng: parseFloat(center.lng.toFixed(3)),
+    });
+  }, []);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+
+    setIsSearching(true);
+    try {
+      // Using MapTiler Geocoding API
+      const response = await fetch(
+        `https://api.maptiler.com/geocoding/${encodeURIComponent(
+          searchQuery
+        )}.json?key=${process.env.NEXT_PUBLIC_MAPTILER_API_KEY}`
+      );
+      const data = await response.json();
+
+      if (data.features && data.features.length > 0) {
+        const [lng, lat] = data.features[0].center;
+        mapRef.current?.flyTo({
+          center: [lng, lat],
+          zoom: 8,
+          duration: 2000,
+        });
+        toast.success(`Found: ${data.features[0].place_name}`);
+      } else {
+        toast.error("Location not found");
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      toast.error("Search failed");
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   return (
     <div className="relative h-screen">
-      {!mapLoaded && (
+      {!mapConfig.loaded && (
         <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center z-10">
           <Loader />
         </div>
       )}
-      {projection === "globe" && <StarryBackground />}
+      {mapConfig.projection === "globe" && <StarryBackground />}
+      <div className="absolute z-10 bottom-2 left-1/2 right-1/2 -translate-x-1/2 md:w-72">
+        <form onSubmit={handleSearch} className="flex items-center gap-2">
+          <Input
+            type="text"
+            placeholder="Search locations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-background"
+          />
+          <Button type="submit" size="sm" disabled={isSearching}>
+            {isSearching ? <LoaderIcon size={16} /> : <Search size={16} />}
+          </Button>
+        </form>
+      </div>
       <Map
         ref={mapRef}
         initialViewState={{
@@ -126,20 +227,20 @@ export default function Home() {
           theme === "light" ? MapTypes.light : MapTypes.dark
         }/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_API_KEY}`}
         onLoad={onMapLoad}
-        projection={projection}
+        projection={mapConfig.projection}
         minZoom={2}
         onMouseMove={handleMouseMove}
+        onZoom={handleZoomChange}
+        onMove={handleMapMove}
       />
       <div className="absolute top-2 right-2 flex flex-col gap-2">
         <Button
-          onClick={() =>
-            setProjection(projection === "mercator" ? "globe" : "mercator")
-          }
+          onClick={toggleProjection}
           title="Switch projection"
           type="button"
           size={"icon"}
         >
-          {projection === "mercator" ? <GlobeIcon /> : <MapIcon />}
+          {mapConfig.projection === "mercator" ? <GlobeIcon /> : <MapIcon />}
         </Button>
         <Button
           onClick={toggleFullscreen}
@@ -147,15 +248,22 @@ export default function Home() {
           type="button"
           size={"icon"}
         >
-          {isFullscreen ? <ShrinkIcon /> : <ExpandIcon />}
+          {mapConfig.isFullscreen ? <ShrinkIcon /> : <ExpandIcon />}
         </Button>
         <Button
           onClick={findMyLocation}
           title="Find my location"
           type="button"
           size={"icon"}
+          disabled={isLocating}
         >
-          {locationService ? <MapPin /> : <MapPinOff />}
+          {isLocating ? (
+            <LoaderIcon size={16} className="animate-spin" />
+          ) : locationService ? (
+            <MapPin />
+          ) : (
+            <MapPinOff />
+          )}
         </Button>
         <a target="_blank" href="https://github.com/Leytox/history-map">
           <Button title="Link to GitHub" type="button" size={"icon"}>
@@ -164,11 +272,51 @@ export default function Home() {
         </a>
         <ThemeSwitcher />
       </div>
-      <Card className="absolute top-2 left-2">
-        <CardContent ref={coordsDisplayRef}>
-          Latitude: 0.0000, Longitude: 0.0000
+
+      <Card className="absolute top-2 left-2 bg-foreground items-center text-background min-w-[175px] max-w-[175px]">
+        <CardContent className="p-2 flex gap-2 items-center text-xs">
+          <Compass size={14} />
+          <span>{`${center.lat}°${center.lat >= 0 ? "N" : "S"}, ${center.lng}°${
+            center.lng >= 0 ? "E" : "W"
+          }`}</span>
         </CardContent>
       </Card>
+      <div className="absolute bottom-2 right-2 flex flex-col gap-2">
+        <Button
+          onClick={handleZoomIn}
+          title="Zoom in"
+          type="button"
+          size={"icon"}
+          className="shadow-lg"
+        >
+          <ZoomIn size={18} />
+        </Button>
+        <Button
+          onClick={handleZoomOut}
+          title="Zoom out"
+          type="button"
+          size={"icon"}
+          className="shadow-lg"
+        >
+          <ZoomOut size={18} />
+        </Button>
+        <Button
+          onClick={resetView}
+          title="Reset view"
+          type="button"
+          size={"icon"}
+          className="shadow-lg"
+        >
+          <HomeIcon size={18} />
+        </Button>
+      </div>
+      <div className="absolute bottom-2 left-2">
+        <Card className="py-1 px-3 bg-foreground text-background">
+          <p className="text-xs flex gap-1">
+            <Search size={16} /> Zoom: {zoom.toFixed(1)}
+          </p>
+        </Card>
+      </div>
     </div>
   );
 }
