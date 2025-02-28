@@ -18,6 +18,7 @@ import { Card, CardContent } from "./ui/card";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import { useState } from "react";
 import Search from "./search";
+import { ProjectionSpecification } from "maplibre-gl";
 export default function Overlay({
   showCurrentLocation,
   isLocating,
@@ -47,17 +48,16 @@ export default function Overlay({
   setSearchQuery: (query: string) => void;
   isSearching: boolean;
 }) {
-  const [showCoordinates] = useLocalStorage("show-coordinates", true);
-  const [showZoomLevel] = useLocalStorage("show-zoom-level", true);
-  const [showAdditionalButtons] = useLocalStorage(
+  const [showCoordinates] = useLocalStorage<boolean>("show-coordinates", true);
+  const [showZoomLevel] = useLocalStorage<boolean>("show-zoom-level", true);
+  const [showAdditionalButtons] = useLocalStorage<boolean>(
     "show-additional-buttons",
     true
   );
-  const [projection, setProjection] = useLocalStorage<"mercator" | "globe">(
-    "projection",
-    "mercator"
-  );
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [projection, setProjection] = useLocalStorage<
+    ProjectionSpecification["type"]
+  >("projection", "mercator");
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   return (
     <>
       {isSearchOpen && (
