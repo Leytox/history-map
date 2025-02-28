@@ -19,6 +19,7 @@ import { useLocalStorage } from "@uidotdev/usehooks";
 import { useState } from "react";
 import Search from "./search";
 import { ProjectionSpecification } from "maplibre-gl";
+import { Coordinates } from "@/constants/types";
 export default function Overlay({
   showCurrentLocation,
   isLocating,
@@ -39,7 +40,7 @@ export default function Overlay({
   handleZoomIn: () => void;
   handleZoomOut: () => void;
   resetView: () => void;
-  center: { lat: number; lng: number };
+  center: Coordinates;
   zoom: number;
   setIsSettingsOpen: (isOpen: boolean) => void;
   isSettingsOpen: boolean;
@@ -122,9 +123,11 @@ export default function Overlay({
         <Card className="border-0 absolute top-2 left-2 bg-foreground items-center text-background min-w-[160px] max-w-[160px] p-1">
           <CardContent className="p-2 flex gap-2 items-center text-xs">
             <Compass size={14} />
-            <span>{`${center.lat.toFixed(2)}°${
-              center.lat >= 0 ? "N" : "S"
-            }, ${center.lng.toFixed(2)}°${center.lng >= 0 ? "E" : "W"}`}</span>
+            <span>{`${center.latitude.toFixed(2)}°${
+              center.latitude >= 0 ? "N" : "S"
+            }, ${center.longitude.toFixed(2)}°${
+              center.longitude >= 0 ? "E" : "W"
+            }`}</span>
           </CardContent>
         </Card>
       )}

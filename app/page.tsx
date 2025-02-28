@@ -1,5 +1,9 @@
 "use client";
-import Map, { MapLayerMouseEvent, MapRef } from "react-map-gl/maplibre";
+import Map, {
+  MapLayerMouseEvent,
+  MapRef,
+  ProjectionSpecification,
+} from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useState, useRef, useCallback } from "react";
 import Loader from "@/components/loader";
@@ -10,11 +14,15 @@ import { getGeoDataExternal } from "@/lib/location";
 import { getLocation } from "@/lib/search";
 import { useLocalStorage } from "@uidotdev/usehooks";
 import Overlay from "@/components/overlay";
+import { Coordinates } from "@/constants/types";
 
 export default function Home() {
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [zoom, setZoom] = useState<number>(4);
-  const [center, setCenter] = useState({ lat: 45, lng: 20 });
+  const [center, setCenter] = useState<Coordinates>({
+    latitude: 45,
+    longitude: 20,
+  });
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const mapRef = useRef<MapRef>(null);
@@ -26,11 +34,10 @@ export default function Home() {
     false
   );
   const [showStars] = useLocalStorage<boolean>("show-stars", false);
-  const [projection] = useLocalStorage<"mercator" | "globe">(
-    "projection",
-    "mercator"
-  );
-  const [loaded, setLoaded] = useState(false);
+  const [projection] = useLocalStorage<
+    ProjectionSpecification | "mercator" | "globe" | undefined
+  >("projection", "mercator");
+  const [loaded, setLoaded] = useState<boolean>(false);
 
   const onMapLoad = useCallback(() => {
     setLoaded(true);
@@ -112,8 +119,8 @@ export default function Home() {
     if (!mapRef.current) return;
     const center = mapRef.current.getCenter();
     setCenter({
-      lat: parseFloat(center.lat.toFixed(3)),
-      lng: parseFloat(center.lng.toFixed(3)),
+      latitude: parseFloat(center.lat.toFixed(3)),
+      longitude: parseFloat(center.lng.toFixed(3)),
     });
   }, []);
 
@@ -123,9 +130,9 @@ export default function Home() {
     setIsSearching(true);
     try {
       const searchRes = await getLocation(searchQuery);
-      const [lng, lat] = searchRes.features[0].center;
+      const [longitude, latitude] = searchRes.features[0].center;
       mapRef.current?.flyTo({
-        center: [lng, lat],
+        center: [longitude, latitude],
         zoom: 8,
         duration: 2000,
       });
