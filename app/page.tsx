@@ -191,6 +191,65 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    // Add keyboard navigation
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!mapRef.current) return;
+
+      const map = mapRef.current;
+      const currentCenter = map.getCenter();
+      const zoom = map.getZoom();
+      const moveDelta = 50 / Math.pow(2, zoom); // Scale movement with zoom level
+
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault();
+          map.panTo([currentCenter.lng, currentCenter.lat + moveDelta]);
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          map.panTo([currentCenter.lng, currentCenter.lat - moveDelta]);
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          map.panTo([currentCenter.lng - moveDelta, currentCenter.lat]);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          map.panTo([currentCenter.lng + moveDelta, currentCenter.lat]);
+          break;
+        case "+":
+          e.preventDefault();
+          map.zoomIn();
+          break;
+        case "-":
+          e.preventDefault();
+          map.zoomOut();
+          break;
+        case "g":
+          if (e.ctrlKey) {
+            e.preventDefault();
+            toggleProjection();
+          }
+          break;
+        case "f":
+          if (e.ctrlKey) {
+            e.preventDefault();
+            toggleFullscreen();
+          }
+          break;
+        case "Escape":
+          resetView();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [toggleProjection, toggleFullscreen, resetView]);
+
   return (
     <div className="relative h-screen">
       {!mapConfig.loaded && (
