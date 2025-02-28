@@ -6,6 +6,9 @@ interface Star {
   y: number;
   size: number;
   opacity: number;
+  twinkleSpeed: number;
+  twinkleDirection: 1 | -1;
+  color: string;
 }
 
 interface ShootingStar {
@@ -38,7 +41,18 @@ const StarryBackground = () => {
       canvas.height = window.innerHeight;
     };
 
-    window.addEventListener("resize", resizeCanvas);
+    // Add a throttle for resize events
+    const throttleResize = () => {
+      let resizeTimeout: NodeJS.Timeout;
+      return () => {
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(resizeCanvas, 200);
+      };
+    };
+
+    // Replace direct resize listener with throttled version
+    const throttledResize = throttleResize();
+    window.addEventListener("resize", throttledResize);
     resizeCanvas();
 
     // Create static stars
@@ -46,12 +60,27 @@ const StarryBackground = () => {
       300,
       Math.floor((window.innerWidth * window.innerHeight) / 6000)
     );
-    starsRef.current = Array.from({ length: starCount }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      size: Math.random() * 1.5 + 0.5, // Smaller, more realistic stars
-      opacity: Math.random() * 0.7 + 0.3, // Static opacity
-    }));
+    starsRef.current = Array.from({ length: starCount }, () => {
+      // Add some color variation to stars
+      const colorVariation = Math.random();
+      let color = "rgb(255, 255, 255)"; // Default white
+
+      if (colorVariation > 0.95) {
+        color = "rgb(255, 220, 180)"; // Warm/yellow star
+      } else if (colorVariation > 0.9) {
+        color = "rgb(180, 220, 255)"; // Blue star
+      }
+
+      return {
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        size: Math.random() * 1.5 + 0.5,
+        opacity: Math.random() * 0.7 + 0.3,
+        twinkleSpeed: Math.random() * 0.01 + 0.002,
+        twinkleDirection: Math.random() > 0.5 ? 1 : -1,
+        color,
+      };
+    });
 
     // Prepare shooting stars array
     shootingStarsRef.current = Array.from({ length: 10 }, () => ({
@@ -133,9 +162,21 @@ const StarryBackground = () => {
 
       // Draw static stars
       starsRef.current.forEach((star) => {
+        // Make stars twinkle
+        star.opacity += star.twinkleSpeed * star.twinkleDirection;
+        if (star.opacity >= 1) {
+          star.opacity = 1;
+          star.twinkleDirection = -1;
+        } else if (star.opacity <= 0.3) {
+          star.opacity = 0.3;
+          star.twinkleDirection = 1;
+        }
+
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+        ctx.fillStyle = star.color
+          .replace("rgb", "rgba")
+          .replace(")", `, ${star.opacity})`);
         ctx.fill();
       });
 
@@ -158,7 +199,7 @@ const StarryBackground = () => {
 
     return () => {
       cancelAnimationFrame(animationFrameRef.current);
-      window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("resize", throttledResize);
     };
   }, []);
 
